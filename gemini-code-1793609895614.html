@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wardrobe Rush - Deluxe Edition</title>
+    <!-- Tailwind CSS for modern responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Fredoka', cursive, sans-serif;
+            background: radial-gradient(circle at center, #fef3c7 0%, #d97706 100%);
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* Realistic Wood Grain Background Effect */
+        .wood-texture {
+            background-color: #3b2210;
+            background-image: 
+                radial-gradient(ellipse at center, rgba(255,255,255,0.08) 0%, rgba(0,0,0,0.4) 100%),
+                repeating-linear-gradient(0deg, transparent, transparent 4px, rgba(0,0,0,0.15) 4px, rgba(0,0,0,0.15) 8px),
+                linear-gradient(90deg, #4a2e18, #2a180b, #5c381d, #3b2210);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.7), 0 15px 35px rgba(0,0,0,0.4);
+        }
+
+        /* Interior Wood Lining */
+        .wood-interior {
+            background-color: #e2c08d;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(255,255,255,0.3) 0%, rgba(0,0,0,0.15) 100%),
+                repeating-linear-gradient(45deg, rgba(139, 92, 46, 0.05) 0, rgba(139, 92, 46, 0.05) 2px, transparent 2px, transparent 6px);
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.3);
+        }
+
+        /* Realistic Door 3D Perspective Animation */
+        .wardrobe-wrapper {
+            perspective: 1200px;
+        }
+        .door-left {
+            transform-origin: left;
+            transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .door-right {
+            transform-origin: right;
+            transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-style: preserve-3d;
+        }
+        .wardrobe-open .door-left {
+            transform: rotateY(-115deg);
+        }
+        .wardrobe-open .door-right {
+            transform: rotateY(115deg);
+        }
+
+        /* Hinge Styling */
+        .hinge {
+            background: linear-gradient(135deg, #fbbf24 0%, #b45309 50%, #78350f 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Door Handle Styling */
+        .door-handle {
+            background: linear-gradient(135deg, #fef08a 0%, #ca8a04 50%, #854d0e 100%);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.6);
+        }
+
+        /* Shirt smooth interactivity */
+        .shirt-item {
+            cursor: grab;
+            transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+            touch-action: none;
+        }
+        .shirt-item:active {
+            cursor: grabbing;
+        }
+        .shirt-item:hover {
+            filter: brightness(1.1);
+            transform: scale(1.05);
+        }
+
+        @keyframes targetPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            50% { transform: scale(1.04); box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+        }
+        .pulse-target {
+            animation: targetPulse 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-2 sm:p-4 overflow-x-hidden">
+
+    <!-- MAIN CONTAINER -->
+    <div id="game-container" class="w-full max-w-md sm:max-w-2xl bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border-4 border-amber-200 p-4 sm:p-6 flex flex-col items-center relative my-auto">
+
+        <!-- TOP BAR / HEADER -->
+        <header class="w-full flex flex-col sm:flex-row justify-between items-center mb-4 border-b-2 border-amber-100 pb-3 gap-3">
+            <div class="flex items-center space-x-2">
+                <span class="text-3xl">🚪</span>
+                <h1 class="text-2xl sm:text-3xl font-bold text-amber-900 tracking-wide">Wardrobe Rush</h1>
+            </div>
+            
+            <!-- Game HUD (Visible during gameplay) -->
+            <div id="game-hud" class="hidden flex items-center space-x-3 sm:space-x-4">
+                <!-- Target Display -->
+                <div id="target-banner" class="flex items-center space-x-2 bg-amber-50 px-3 py-1.5 rounded-2xl border-2 border-amber-200 pulse-target shadow-sm">
+                    <span class="text-xs sm:text-sm font-semibold text-amber-800">Find:</span>
+                    <div id="target-color-badge" class="w-5 h-5 sm:w-6 sm:h-6 rounded-full shadow-inner border border-black/25"></div>
+                    <span id="target-name" class="font-bold text-amber-900 text-sm sm:text-base capitalize">Red Shirt</span>
+                </div>
+                <!-- Timer Display -->
+                <div class="flex items-center space-x-1.5 bg-slate-900 text-white px-3 py-1.5 rounded-2xl shadow-inner">
+                    <span class="text-lg">⏱️</span>
+                    <span id="timer-display" class="font-mono text-base sm:text-lg font-bold tracking-wider">00:00.00</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- SCREEN 1: START SCREEN -->
+        <div id="screen-start" class="flex flex-col items-center justify-center text-center py-6 sm:py-8 space-y-5 w-full max-w-md">
+            <div class="relative w-28 h-28 sm:w-32 sm:h-32 bg-amber-200 rounded-3xl flex items-center justify-center shadow-lg border-4 border-amber-300 mb-1">
+                <span class="text-6xl">👕</span>
+                <div class="absolute -bottom-3 bg-amber-600 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow">Deluxe Edition</div>
+            </div>
+            <h2 class="text-2xl sm:text-4xl font-bold text-slate-800">Can You Find Your Shirt?</h2>
+            <p class="text-slate-600 text-sm sm:text-base leading-relaxed px-2">
+                Our tall luxury wardrobe is packed with messy stacked clothes! Open the double doors, remove blocking shirts into the side basket to reach your target shirt, put the rest back, and close the doors!
+            </p>
+            <button onclick="startGame()" class="w-full px-8 py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all active:translate-y-0 cursor-pointer">
+                Start Game 🚀
+            </button>
+        </div>
+
+        <!-- SCREEN 2: GAMEPLAY SCREEN -->
+        <div id="screen-game" class="hidden w-full flex-col items-center relative flex-grow">
+            
+            <!-- Instructions Toast -->
+            <div id="instruction-toast" class="bg-amber-100 text-amber-900 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold mb-3 shadow-sm text-center transition-all duration-300 w-full">
+                Step 1: Click wardrobe doors to open them!
+            </div>
+
+            <!-- Playfield Wrapper (Optimized tall vertical orientation) -->
+            <div class="relative w-full max-w-lg h-[460px] sm:h-[500px] bg-slate-100 rounded-3xl border-4 border-amber-200 overflow-hidden flex items-center justify-center shadow-inner">
+                
+                <!-- SIDE BASKET (For displaced wrong shirts) -->
+                <div id="basket-area" class="absolute left-3 bottom-3 w-32 sm:w-36 h-44 sm:h-48 bg-amber-200/90 backdrop-blur-sm rounded-2xl border-3 border-dashed border-amber-400 p-2 flex flex-col items-center justify-end z-20 shadow-md">
+                    <span class="text-[11px] font-bold text-amber-900 mb-1">Displaced Pile</span>
+                    <div id="basket-slots" class="w-full flex-grow relative overflow-hidden flex flex-wrap content-end justify-center gap-1 p-1">
+                        <!-- Displaced shirts stack here -->
+                    </div>
+                </div>
+
+                <!-- TALL REALISTIC WARDROBE STRUCTURE -->
+                <div id="wardrobe" class="wardrobe-wrapper relative w-64 sm:w-72 h-[420px] sm:h-[460px] wood-texture rounded-t-3xl border-8 border-[#231206] shadow-2xl flex flex-col items-center justify-end">
+                    
+                    <!-- Decorative Crown Molding Top -->
+                    <div class="absolute -top-3 inset-x-0 h-4 bg-[#5c381d] border-b-2 border-[#1f1005] rounded-t-xl shadow-md"></div>
+
+                    <!-- Wardrobe Interior (Polished Wooden Closet Interior with Shelves & Rod) -->
+                    <div id="wardrobe-interior" class="w-full h-full wood-interior relative p-3 sm:p-4 flex flex-col justify-between overflow-visible">
+                        <!-- Top Shelf -->
+                        <div class="w-full h-3 bg-[#c79c5e] border-b-2 border-amber-900/30 rounded shadow-sm"></div>
+                        
+                        <!-- Hanging Closet Rod -->
+                        <div class="absolute top-16 inset-x-6 h-2 bg-slate-400 rounded-full shadow-inner"></div>
+
+                        <!-- Middle Shelf -->
+                        <div class="w-full h-3 bg-[#c79c5e] border-b-2 border-amber-900/30 rounded shadow-sm my-auto"></div>
+
+                        <!-- Bottom Floor Platform -->
+                        <div class="absolute inset-x-0 bottom-0 h-5 bg-[#b5884d] border-t-2 border-amber-900/40"></div>
+
+                        <!-- Shirts Container inside wardrobe -->
+                        <div id="wardrobe-shirts" class="absolute inset-0 pt-6 px-3 pb-4 flex flex-wrap items-center justify-center gap-2 overflow-hidden z-10">
+                            <!-- Dynamically generated stacked shirts injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Hinges -->
+                    <div class="hinge absolute left-0 top-12 w-2 h-8 rounded-r z-20"></div>
+                    <div class="hinge absolute left-0 top-1/2 w-2 h-8 rounded-r z-20"></div>
+                    <div class="hinge absolute left-0 bottom-12 w-2 h-8 rounded-r z-20"></div>
+                    
+                    <div class="hinge absolute right-0 top-12 w-2 h-8 rounded-l z-20"></div>
+                    <div class="hinge absolute right-0 top-1/2 w-2 h-8 rounded-l z-20"></div>
+                    <div class="hinge absolute right-0 bottom-12 w-2 h-8 rounded-l z-20"></div>
+
+                    <!-- Wardrobe Left Door (With panel molding & handle) -->
+                    <div id="door-l" onclick="toggleWardrobe()" class="door-left absolute left-0 top-0 w-1/2 h-full wood-texture border-r-4 border-[#1f1005] rounded-tl-2xl flex items-center justify-start pl-3 cursor-pointer z-30 shadow-2xl group">
+                        <!-- Left door panel inset -->
+                        <div class="absolute inset-3 border border-amber-900/40 rounded-l-xl pointer-events-none"></div>
+                        <!-- Handle -->
+                        <div class="door-handle w-3.5 h-16 rounded-full shadow-md group-hover:brightness-110 transition-all ml-1"></div>
+                    </div>
+
+                    <!-- Wardrobe Right Door (With panel molding & handle) -->
+                    <div id="door-r" onclick="toggleWardrobe()" class="door-right absolute right-0 top-0 w-1/2 h-full wood-texture border-l-4 border-[#1f1005] rounded-tr-2xl flex items-center justify-end pr-3 cursor-pointer z-30 shadow-2xl group">
+                        <!-- Right door panel inset -->
+                        <div class="absolute inset-3 border border-amber-900/40 rounded-r-xl pointer-events-none"></div>
+                        <!-- Handle -->
+                        <div class="door-handle w-3.5 h-16 rounded-full shadow-md group-hover:brightness-110 transition-all mr-1"></div>
+                    </div>
+                </div>
+
+                <!-- RETURN ZONE / CLEAN UP NOTIFICATION -->
+                <div id="cleanup-prompt" class="hidden absolute top-3 bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow-lg animate-bounce z-40 text-center">
+                    Target secured! Put remaining shirts back & close the wardrobe doors!
+                </div>
+            </div>
+
+            <!-- ACTION CONTROLS FOOTER -->
+            <div class="w-full flex justify-between items-center mt-3 px-1">
+                <button onclick="resetGame()" class="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl text-xs sm:text-sm transition-colors cursor-pointer">
+                    🔄 Restart
+                </button>
+                <div id="status-helper" class="text-xs sm:text-sm font-semibold text-slate-600 text-center truncate max-w-[180px] sm:max-w-xs">
+                    Status: Wardrobe Closed
+                </div>
+                <button id="close-doors-btn" onclick="tryCloseWardrobe()" class="hidden px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all cursor-pointer">
+                    🔒 Close
+                </button>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: WIN MODAL -->
+        <div id="screen-win" class="hidden absolute inset-0 bg-slate-900/70 backdrop-blur-md rounded-3xl flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-sm sm:max-w-md w-full shadow-2xl border-4 border-amber-200 text-center transform animate-in fade-in zoom-in duration-300">
+                <div class="text-5xl sm:text-6xl mb-2">🏆</div>
+                <h3 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-1">Wardrobe Master!</h3>
+                <p id="win-subtitle" class="text-slate-500 text-sm sm:text-base mb-5">You found the target shirt and cleaned up successfully!</p>
+                
+                <!-- Score Card -->
+                <div class="bg-amber-50 rounded-2xl p-4 mb-5 border-2 border-amber-100 flex flex-col space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-600 text-sm font-semibold">Total Time:</span>
+                        <span id="final-time" class="font-mono text-xl sm:text-2xl font-bold text-amber-900">00:45.23</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-600 text-sm font-semibold">Performance:</span>
+                        <span id="final-rating" class="text-sm sm:text-base font-bold text-emerald-600">⚡ Lightning Fast!</span>
+                    </div>
+                </div>
+
+                <button onclick="startGame()" class="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-base sm:text-lg rounded-2xl shadow-lg transition-all cursor-pointer">
+                    Play Again 🔄
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- AUDIO SYNTHESIZER (Web Audio API) -->
+    <script>
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            try {
+                initAudio();
+                if (!audioCtx) return;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'open') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(130, now);
+                    osc.frequency.linearRampToValueAtTime(300, now + 0.25);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'grab') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.setValueAtTime(480, now + 0.05);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'success') {
+                    const notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach((freq, idx) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.type = 'sine';
+                        o.frequency.value = freq;
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        g.gain.setValueAtTime(0.15, now + idx * 0.08);
+                        g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+                        o.start(now + idx * 0.08);
+                        o.stop(now + idx * 0.08 + 0.3);
+                    });
+                }
+            } catch (e) {
+                console.log("Audio not allowed yet");
+            }
+        }
+    </script>
+
+    <!-- GAME LOGIC SCRIPT -->
+    <script>
+        const SHIRT_COLORS = [
+            { name: 'Red', hex: '#ef4444', border: '#b91c1c' },
+            { name: 'Blue', hex: '#3b82f6', border: '#1d4ed8' },
+            { name: 'Green', hex: '#22c55e', border: '#15803d' },
+            { name: 'Yellow', hex: '#eab308', border: '#a16207' },
+            { name: 'Purple', hex: '#a855f7', border: '#7e22ce' },
+            { name: 'Orange', hex: '#f97316', border: '#c2410c' }
+        ];
+
+        let gameState = {
+            isStarted: false,
+            isWardrobeOpen: false,
+            targetColor: null,
+            shirts: [],
+            startTime: 0,
+            timerInterval: null,
+            elapsedTimeMs: 0,
+            targetAcquired: false
+        };
+
+        // DOM Elements
+        const screenStart = document.getElementById('screen-start');
+        const screenGame = document.getElementById('screen-game');
+        const screenWin = document.getElementById('screen-win');
+        const gameHud = document.getElementById('game-hud');
+        const wardrobeEl = document.getElementById('wardrobe');
+        const wardrobeShirtsEl = document.getElementById('wardrobe-shirts');
+        const basketSlotsEl = document.getElementById('basket-slots');
+        const targetColorBadge = document.getElementById('target-color-badge');
+        const targetNameEl = document.getElementById('target-name');
+        const timerDisplayEl = document.getElementById('timer-display');
+        const instructionToast = document.getElementById('instruction-toast');
+        const statusHelper = document.getElementById('status-helper');
+        const closeDoorsBtn = document.getElementById('close-doors-btn');
+        const cleanupPrompt = document.getElementById('cleanup-prompt');
+
+        function startGame() {
+            playSound('click');
+            screenStart.classList.add('hidden');
+            screenWin.classList.add('hidden');
+            screenGame.classList.remove('hidden');
+            screenGame.classList.add('flex');
+            gameHud.classList.remove('hidden');
+            gameHud.classList.add('flex');
+
+            const randomIndex = Math.floor(Math.random() * SHIRT_COLORS.length);
+            gameState.targetColor = SHIRT_COLORS[randomIndex];
+
+            targetColorBadge.style.backgroundColor = gameState.targetColor.hex;
+            targetColorBadge.style.borderColor = gameState.targetColor.border;
+            targetNameEl.textContent = `${gameState.targetColor.name} Shirt`;
+
+            gameState.isWardrobeOpen = false;
+            gameState.targetAcquired = false;
+            wardrobeEl.classList.remove('wardrobe-open');
+            closeDoorsBtn.classList.add('hidden');
+            cleanupPrompt.classList.add('hidden');
+            statusHelper.textContent = "Status: Wardrobe Closed";
+            instructionToast.textContent = "Step 1: Click wardrobe doors to open them!";
+            instructionToast.className = "bg-amber-100 text-amber-900 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold mb-3 shadow-sm text-center transition-all duration-300 w-full";
+
+            generateShirts();
+            renderPlayfield();
+
+            gameState.startTime = Date.now();
+            clearInterval(gameState.timerInterval);
+            gameState.timerInterval = setInterval(updateTimer, 31);
+        }
+
+        function resetGame() {
+            startGame();
+        }
+
+        function generateShirts() {
+            gameState.shirts = [];
+            // Create target shirt
+            const targetShirt = {
+                id: 0,
+                color: gameState.targetColor,
+                isTarget: true,
+                location: 'wardrobe',
+                layer: 0
+            };
+
+            // Create 6 other decoy shirts
+            let decoyShirts = [];
+            for (let i = 1; i <= 6; i++) {
+                let availableColors = SHIRT_COLORS.filter(c => c.name !== gameState.targetColor.name);
+                let col = availableColors[Math.floor(Math.random() * availableColors.length)];
+                decoyShirts.push({
+                    id: i,
+                    color: col,
+                    isTarget: false,
+                    location: 'wardrobe',
+                    layer: 0
+                });
+            }
+
+            // Shuffle decoys and assign top layers (0 to 5)
+            decoyShirts.sort(() => Math.random() - 0.5);
+            decoyShirts.forEach((shirt, idx) => {
+                shirt.layer = idx;
+            });
+
+            // Force target shirt to be either last (layer 6) or second-to-last (layer 5)
+            const targetLayer = Math.random() < 0.5 ? 6 : 5;
+            targetShirt.layer = targetLayer;
+
+            // If target is layer 5, pick one decoy from layer 5 and push it down to layer 6
+            if (targetLayer === 5) {
+                let displacedDecoy = decoyShirts.find(s => s.layer === 5);
+                if (displacedDecoy) {
+                    displacedDecoy.layer = 6;
+                }
+            }
+
+            gameState.shirts = [targetShirt, ...decoyShirts];
+        }
+
+        function updateTimer() {
+            const now = Date.now();
+            gameState.elapsedTimeMs = now - gameState.startTime;
+            const totalSecs = Math.floor(gameState.elapsedTimeMs / 1000);
+            const mins = String(Math.floor(totalSecs / 60)).padStart(2, '0');
+            const secs = String(totalSecs % 60).padStart(2, '0');
+            const millis = String(Math.floor((gameState.elapsedTimeMs % 1000) / 10)).padStart(2, '0');
+            timerDisplayEl.textContent = `${mins}:${secs}.${millis}`;
+        }
+
+        function toggleWardrobe() {
+            playSound('open');
+            gameState.isWardrobeOpen = !gameState.isWardrobeOpen;
+
+            if (gameState.isWardrobeOpen) {
+                wardrobeEl.classList.add('wardrobe-open');
+                statusHelper.textContent = "Status: Wardrobe Open";
+                
+                if (!gameState.targetAcquired) {
+                    instructionToast.textContent = "Step 2: Remove top blocking shirts into the basket to reach your target!";
+                    instructionToast.className = "bg-blue-100 text-blue-900 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold mb-3 shadow-sm text-center transition-all duration-300 w-full";
+                } else {
+                    instructionToast.textContent = "Step 3: Return remaining shirts or close wardrobe!";
+                }
+            } else {
+                wardrobeEl.classList.remove('wardrobe-open');
+                statusHelper.textContent = "Status: Wardrobe Closed";
+            }
+        }
+
+        function renderPlayfield() {
+            wardrobeShirtsEl.innerHTML = '';
+            basketSlotsEl.innerHTML = '';
+
+            let wardrobeShirts = gameState.shirts.filter(s => s.location === 'wardrobe');
+            wardrobeShirts.sort((a, b) => a.layer - b.layer);
+
+            let basketShirts = gameState.shirts.filter(s => s.location === 'basket');
+
+            // Render wardrobe interior items stacked in the center shelf
+            wardrobeShirts.forEach((shirt) => {
+                const el = createShirtElement(shirt);
+                
+                // Check if shirt is blocked by anything above it in the stack (smaller layer index)
+                const isBlocked = wardrobeShirts.some(other => other.layer < shirt.layer);
+                
+                if (isBlocked) {
+                    el.style.filter = 'brightness(0.85) saturate(0.8)';
+                }
+
+                el.style.position = 'absolute';
+                el.style.zIndex = 50 - shirt.layer;
+                el.style.transform = `translateY(${shirt.layer * 6}px) scale(${1 - shirt.layer * 0.015})`;
+
+                wardrobeShirtsEl.appendChild(el);
+            });
+
+            basketShirts.forEach((shirt, index) => {
+                const el = createShirtElement(shirt);
+                el.style.position = 'relative';
+                el.style.transform = `scale(0.65) translateY(${index * -8}px)`;
+                basketSlotsEl.appendChild(el);
+            });
+
+            const displacedCount = basketShirts.length;
+            if (gameState.targetAcquired && displacedCount === 0) {
+                closeDoorsBtn.classList.remove('hidden');
+                cleanupPrompt.classList.remove('hidden');
+                instructionToast.textContent = "Final Step: Click 'Close' to finish!";
+                instructionToast.className = "bg-emerald-100 text-emerald-900 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold mb-3 shadow-sm text-center transition-all duration-300 w-full";
+            } else {
+                closeDoorsBtn.classList.add('hidden');
+                cleanupPrompt.classList.add('hidden');
+            }
+        }
+
+        function createShirtElement(shirt) {
+            const div = document.createElement('div');
+            div.className = `shirt-item relative w-16 h-18 sm:w-20 sm:h-22 rounded-xl shadow-md flex flex-col items-center justify-center cursor-pointer border-2`;
+            div.style.backgroundColor = shirt.color.hex;
+            div.style.borderColor = shirt.color.border;
+
+            div.innerHTML = `
+                <svg class="w-8 h-8 sm:w-10 sm:h-10 drop-shadow" viewBox="0 0 24 24" fill="white">
+                    <path d="M12 2l3 2 4-1 2 4-3 2v12h-12v-12l-3-2 2-4 4 1 3-2z"/>
+                </svg>
+                <span class="text-[9px] sm:text-[10px] font-bold text-white/95 uppercase tracking-tighter">${shirt.color.name}</span>
+            `;
+
+            div.onclick = (e) => {
+                e.stopPropagation();
+                handleShirtClick(shirt);
+            };
+
+            return div;
+        }
+
+        function handleShirtClick(shirt) {
+            if (!gameState.isWardrobeOpen) {
+                statusHelper.textContent = "Open wardrobe doors first!";
+                setTimeout(() => { statusHelper.textContent = gameState.isWardrobeOpen ? "Status: Wardrobe Open" : "Status: Wardrobe Closed"; }, 1500);
+                return;
+            }
+
+            let wardrobeShirts = gameState.shirts.filter(s => s.location === 'wardrobe');
+
+            if (shirt.location === 'wardrobe') {
+                // Check if there are any shirts stacked above this one (smaller layer)
+                const isBlocked = wardrobeShirts.some(other => other.layer < shirt.layer);
+                if (isBlocked) {
+                    playSound('click');
+                    statusHelper.textContent = "Remove top shirts first!";
+                    setTimeout(() => { statusHelper.textContent = "Status: Wardrobe Open"; }, 1500);
+                    return;
+                }
+
+                playSound('grab');
+                if (shirt.isTarget) {
+                    shirt.location = 'secured';
+                    gameState.targetAcquired = true;
+                    playSound('success');
+                    statusHelper.textContent = "Target secured! Clean up remaining clothes.";
+                    instructionToast.textContent = "Great! Now return any displaced shirts back to the wardrobe.";
+                    instructionToast.className = "bg-amber-100 text-amber-900 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold mb-3 shadow-sm text-center transition-all duration-300 w-full";
+                } else {
+                    shirt.location = 'basket';
+                    reindexWardrobeLayers();
+                    statusHelper.textContent = `Moved ${shirt.color.name} to basket.`;
+                }
+            } else if (shirt.location === 'basket') {
+                playSound('grab');
+                shirt.location = 'wardrobe';
+                // Put back as top layer
+                let activeWardrobe = gameState.shirts.filter(s => s.location === 'wardrobe');
+                shirt.layer = activeWardrobe.length > 0 ? Math.min(...activeWardrobe.map(s => s.layer)) - 1 : 0;
+                statusHelper.textContent = `Put ${shirt.color.name} back in wardrobe.`;
+            }
+
+            renderPlayfield();
+        }
+
+        function reindexWardrobeLayers() {
+            let wardrobeShirts = gameState.shirts.filter(s => s.location === 'wardrobe');
+            wardrobeShirts.sort((a, b) => a.layer - b.layer);
+            wardrobeShirts.forEach((s, idx) => {
+                s.layer = idx;
+            });
+        }
+
+        function tryCloseWardrobe() {
+            if (!gameState.targetAcquired) {
+                statusHelper.textContent = "Find the target shirt first!";
+                return;
+            }
+
+            const basketShirts = gameState.shirts.filter(s => s.location === 'basket');
+            if (basketShirts.length > 0) {
+                statusHelper.textContent = "Put displaced shirts back first!";
+                return;
+            }
+
+            playSound('open');
+            gameState.isWardrobeOpen = false;
+            wardrobeEl.classList.remove('wardrobe-open');
+            clearInterval(gameState.timerInterval);
+
+            setTimeout(showWinScreen, 600);
+        }
+
+        function showWinScreen() {
+            screenWin.classList.remove('hidden');
+            const totalSecs = gameState.elapsedTimeMs / 1000;
+            
+            const mins = String(Math.floor(totalSecs / 60)).padStart(2, '0');
+            const secs = String(Math.floor(totalSecs % 60)).padStart(2, '0');
+            const millis = String(Math.floor((gameState.elapsedTimeMs % 1000) / 10)).padStart(2, '0');
+            
+            document.getElementById('final-time').textContent = `${mins}:${secs}.${millis}`;
+
+            const ratingEl = document.getElementById('final-rating');
+            if (totalSecs < 15) {
+                ratingEl.textContent = "⚡ Lightning Fast! (Godlike)";
+            } else if (totalSecs < 28) {
+                ratingEl.textContent = "🔥 Super Speedy Pro!";
+            } else if (totalSecs < 45) {
+                ratingEl.textContent = "👍 Good Job!";
+            } else {
+                ratingEl.textContent = "🐢 A bit slow, try again!";
+            }
+        }
+    </script>
+</body>
+</html>
